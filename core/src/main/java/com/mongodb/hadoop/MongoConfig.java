@@ -26,6 +26,7 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.*;
 
 import java.io.*;
+import java.util.List;
 
 // Hadoop
 // Commons
@@ -161,7 +162,7 @@ public class MongoConfig {
         return MongoConfigUtil.getMongoURI( _conf, key );
     }
 
-    public MongoURI getInputURI(){
+    public List<MongoURI> getInputURIs(){
         return MongoConfigUtil.getInputURI( _conf );
     }
 

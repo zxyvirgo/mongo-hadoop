@@ -8,6 +8,7 @@ import org.apache.hadoop.mapreduce.*;
 
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.Random;
 
 /**
  * Copyright (c) 2010, 2011 10gen, Inc. <http://10gen.com>
@@ -39,7 +40,8 @@ public class MongoSplitter {
          * On the jobclient side we want *ONLY* the min and max ids for each
          * split; Actual querying will be done on the individual mappers.
          */
-        MongoURI uri = conf.getInputURI();
+		List<MongoURI> inputUris = conf.getInputURIs();
+		MongoURI uri = inputUris.get(0);
         Mongo mongo;
         try {
             mongo = uri.connect();
@@ -47,9 +49,13 @@ public class MongoSplitter {
             throw new IllegalStateException( " Unable to connect to MongoDB at '" + uri + "'", e);
         }
 
+		log.info("uri: " + uri.toString());
+		log.info("db:" + uri.getDatabase());
+
         DB db = mongo.getDB( uri.getDatabase() );
         DBCollection coll = db.getCollection( uri.getCollection() );
         final CommandResult stats = coll.getStats();
+		log.info("stats: " + stats.toString());
         
         final boolean isSharded = stats.getBoolean( "sharded", false );
 
@@ -146,14 +152,22 @@ public class MongoSplitter {
         final DBObject query = b.get();
         log.trace( "Assembled Query: " + query );
 
-        return new MongoInputSplit( conf.getInputURI(), conf.getInputKey(), query, conf.getFields(), 
+		List<MongoURI> inputUris = conf.getInputURIs();
+		// randomly choose a URI
+		int index = randGenerator.nextInt(inputUris.size());
+		MongoURI uri = inputUris.get(index);
+		log.info("using uri: " + uri);
+
+        return new MongoInputSplit( uri, conf.getInputKey(), query, conf.getFields(), 
                                     conf.getSort(), conf.getLimit(), conf.getSkip(), conf.isNoTimeout() );
     }
     
     private static List<InputSplit> calculateSingleSplit( MongoConfig conf ){
         final List<InputSplit> splits = new ArrayList<InputSplit>( 1 );
         // no splits, no sharding
-        splits.add( new MongoInputSplit( conf.getInputURI(), conf.getInputKey(), conf.getQuery(), 
+		List<MongoURI> inputUris = conf.getInputURIs();
+		MongoURI uri = inputUris.get(0);
+        splits.add( new MongoInputSplit( uri, conf.getInputKey(), conf.getQuery(), 
                                          conf.getFields(), conf.getSort(), conf.getLimit(), conf.getSkip(),
                                          conf.isNoTimeout() ) );
 
@@ -335,14 +349,17 @@ public class MongoSplitter {
                     log.debug( "[" + numChunks + "/" + numExpectedChunks + "] new query is: " + shardKeyQuery );
                 }
 
-                MongoURI inputURI = conf.getInputURI();
+				List<MongoURI> inputUris = conf.getInputURIs();
+				int index = randGenerator.nextInt(inputUris.size());
+				MongoURI inputURI = inputUris.get(index);
+				log.info("using randomly selected uri: " + inputURI + " from  " + inputUris.size() + " available uris");
 
                 if ( useShards ){
                     final String shardname = row.getString( "shard" );
 
                     String host = shardMap.get( shardname );
 
-                    inputURI = getNewURI( inputURI, host, slaveOk );
+                    inputURI = getNewURI( uri, host, slaveOk );
                 }
                 splits.add(
                         new MongoInputSplit( inputURI, conf.getInputKey(), shardKeyQuery, conf.getFields(), conf.getSort(),  // TODO - should inputKey be the shard key?
@@ -406,4 +423,5 @@ public class MongoSplitter {
     }
 
     private static final Log log = LogFactory.getLog( MongoSplitter.class );
+	private static Random randGenerator = new Random();
 }

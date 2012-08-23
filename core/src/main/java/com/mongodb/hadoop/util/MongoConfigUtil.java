@@ -23,6 +23,8 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.*;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Configuration helper tool for MongoDB related Map/Reduce jobs
@@ -244,14 +246,32 @@ public class MongoConfigUtil {
 
     public static MongoURI getMongoURI( Configuration conf, String key ){
         final String raw = conf.get( key );
-        if ( raw != null && !raw.trim().isEmpty() )
-            return new MongoURI( raw );
-        else
-            return null;
+		if(raw != null ){
+			return new MongoURI(raw);
+		}else{
+			return null;
+		}
     }
 
-    public static MongoURI getInputURI( Configuration conf ){
-        return getMongoURI( conf, INPUT_URI );
+    public static List<MongoURI> getMongoURIs( Configuration conf, String key ){
+		log.info("blasfasf:"+ conf.get(key));
+        final String[] raw = conf.getStrings( key );
+        log.info("raw length:" + raw.length);
+		if(raw != null && raw.length > 0){
+			ArrayList<MongoURI> mongoURIs = new ArrayList<MongoURI>();
+			for(int i=0;i<raw.length;i++){
+				log.info("raw uri:" + raw[i]);
+                log.info("Sucessfully authenticated with collection.");
+				mongoURIs.add( new MongoURI(raw[i]) );
+			}
+			return mongoURIs;
+		}else{
+			return null;
+		}
+    }
+
+    public static List<MongoURI> getInputURI( Configuration conf ){
+        return getMongoURIs( conf, INPUT_URI );
     }
 
     public static DBCollection getCollection( MongoURI uri ){
@@ -288,8 +308,8 @@ public class MongoConfigUtil {
 
     public static DBCollection getInputCollection( Configuration conf ){
         try {
-            final MongoURI _uri = getInputURI( conf );
-            return getCollection( _uri );
+            final List<MongoURI> _uris = getInputURI( conf );
+            return getCollection( _uris.get(0) );
         }
         catch ( final Exception e ) {
             throw new IllegalArgumentException(

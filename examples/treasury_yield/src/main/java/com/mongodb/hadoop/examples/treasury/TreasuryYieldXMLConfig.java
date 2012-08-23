@@ -33,6 +33,7 @@ public class TreasuryYieldXMLConfig extends MongoTool {
         // Load the XML config defined in hadoop-local.xml
         Configuration.addDefaultResource( "src/examples/hadoop-local.xml" );
         Configuration.addDefaultResource( "src/examples/mongo-defaults.xml" );
+        Configuration.addDefaultResource( "mongo-treasury_yield.xml" );
     }
 
     public static void main( final String[] pArgs ) throws Exception{
