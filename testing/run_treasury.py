@@ -23,7 +23,7 @@ AWS_SECRET=os.environ.get('AWS_SECRET',None)
 AWS_ACCESSKEY=os.environ.get('AWS_ACCESSKEY',None) 
 TEMPDIR=os.environ.get('TEMPDIR','/tmp')
 USE_ASSEMBLY=os.environ.get('USE_ASSEMBLY', True)
-global num_runs = 0
+num_runs = 0
 
 if not os.path.isdir(TEMPDIR):
     os.makedirs(TEMPDIR)
@@ -249,6 +249,7 @@ def runstreamingjob(hostname, params, input_collection='mongo_hadoop.yield_histo
 class Standalone(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        global num_runs
         self.server = mongo_manager.StandaloneManager(home=os.path.join(TEMPDIR,"standalone1_" + num_runs))
         self.server_hostname = self.server.start_server(fresh=True)
         self.server.connection().drop_database('mongo_hadoop')
@@ -305,6 +306,7 @@ class BaseShardedTest(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         time.sleep(5)
+        global num_runs
         self.shard1 = mongo_manager.ReplicaSetManager(home=os.path.join(TEMPDIR, "rs0_" + num_runs),
                 with_arbiter=True,
                 num_members=3)
