@@ -23,6 +23,7 @@ AWS_SECRET=os.environ.get('AWS_SECRET',None)
 AWS_ACCESSKEY=os.environ.get('AWS_ACCESSKEY',None) 
 TEMPDIR=os.environ.get('TEMPDIR','/tmp')
 USE_ASSEMBLY=os.environ.get('USE_ASSEMBLY', True)
+global num_runs = 0
 
 if not os.path.isdir(TEMPDIR):
     os.makedirs(TEMPDIR)
@@ -248,7 +249,7 @@ def runstreamingjob(hostname, params, input_collection='mongo_hadoop.yield_histo
 class Standalone(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.server = mongo_manager.StandaloneManager(home=os.path.join(TEMPDIR,"standalone1"))
+        self.server = mongo_manager.StandaloneManager(home=os.path.join(TEMPDIR,"standalone1_" + num_runs))
         self.server_hostname = self.server.start_server(fresh=True)
         self.server.connection().drop_database('mongo_hadoop')
         self.server.connection()['mongo_hadoop'].set_profiling_level(2)
@@ -257,6 +258,7 @@ class Standalone(unittest.TestCase):
                                    "yield_historical.in",
                                    JSONFILE_PATH)
         print "server is ready."
+        num_runs += 1
 
     def setUp(self):
         self.server.connection()['mongo_hadoop']['yield_historical.out'].drop()
@@ -303,26 +305,27 @@ class BaseShardedTest(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         time.sleep(5)
-        self.shard1 = mongo_manager.ReplicaSetManager(home=os.path.join(TEMPDIR, "rs0"),
+        self.shard1 = mongo_manager.ReplicaSetManager(home=os.path.join(TEMPDIR, "rs0_" + num_runs),
                 with_arbiter=True,
                 num_members=3)
         self.shard1.start_set(fresh=True)
-        self.shard2 = mongo_manager.ReplicaSetManager(home=os.path.join(TEMPDIR, "rs1"),
+        self.shard2 = mongo_manager.ReplicaSetManager(home=os.path.join(TEMPDIR, "rs1_" + num_runs),
                 with_arbiter=True,
                 num_members=3)
         self.shard2.start_set(fresh=True)
-        self.configdb = mongo_manager.StandaloneManager(home=os.path.join(TEMPDIR, 'config_db'))
+        self.configdb = mongo_manager.StandaloneManager(home=os.path.join(TEMPDIR, 'config_db_'+ num_runs))
         self.confighost = self.configdb.start_server(fresh=True)
 
-        self.mongos = mongo_manager.MongosManager(home=os.path.join(TEMPDIR, 'mongos'))
+        self.mongos = mongo_manager.MongosManager(home=os.path.join(TEMPDIR, 'mongos_' + num_runs))
         self.mongos_hostname = self.mongos.start_mongos(self.confighost,
                 [h.get_shard_string() for h in (self.shard1,self.shard2)],
                 noauth=False, fresh=True, addShards=True)
 
-        self.mongos2 = mongo_manager.MongosManager(home=os.path.join(TEMPDIR, 'mongos2'))
+        self.mongos2 = mongo_manager.MongosManager(home=os.path.join(TEMPDIR, 'mongos2_' + num_runs))
         self.mongos2_hostname = self.mongos2.start_mongos(self.confighost,
                 [h.get_shard_string() for h in (self.shard1,self.shard2)],
                 noauth=False, fresh=True, addShards=False)
+        num_runs += 1
 
         self.mongos_connection = self.mongos.connection()
         self.mongos2_connection = self.mongos2.connection()
